@@ -2,6 +2,13 @@
 
 Todas as mudanças relevantes deste projeto serão documentadas aqui. O formato segue Keep a Changelog e o versionamento segue Semantic Versioning.
 
+## [0.6.0] - 2026-09-28
+
+### Alterado
+- Substituído o banco autoral pelas três questões apresentadas no `compilado_provas_ifs.md`, preservando enunciados, alternativas disponíveis e gabaritos.
+- Adicionada rastreabilidade por instituição, processo seletivo e fonte em cada questão.
+- Validação ajustada para respeitar a quantidade de alternativas realmente disponível no documento de origem.
+
 ## [0.5.0] - 2026-09-25
 
 ### Adicionado
