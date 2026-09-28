@@ -52,6 +52,7 @@ A plataforma conta com um dashboard administrativo completo localizado em [`dist
 - **Controle de Acesso em Tempo Real:** Botão para **Bloquear** ou **Liberar** o acesso de qualquer estudante com 1 clique.
 - **Busca e Filtros:** Pesquisa instantânea por nome, e-mail, UF ou instituição.
 - **Acompanhamento Pedagógico Individual:** Visualização dos erros recentes e desempenho por matéria de cada aluno.
+- **Central de Relatos:** Recebimento e acompanhamento de falhas reportadas pelos usuários, inclusive problemas vinculados a uma questão específica.
 - **Atalho Automático:** Quando um e-mail de administrador (configurado em `ADMIN_EMAILS`) faz login no app, um botão **"⚙️ Painel Admin"** aparece na barra superior.
 
 ---
@@ -102,6 +103,7 @@ Painel Admin: `https://ifintenso.web.app/admin.html`
 - [x] v0.4.0: Autenticação Google via Firebase Auth, sincronização no Firestore e Dashboard de controle de acesso e acompanhamento pedagógico (`admin.html`).
 - [x] v0.5.0: Registro nacional das fontes oficiais dos 38 Institutos Federais e política de ingestão do banco de questões.
 - [x] v0.6.0: Banco substituído pelas questões do compilado de IFRS, IFSul e IFFar, com rastreabilidade por prova.
+- [x] v0.7.0: Reporte de falhas pelos usuários e central de tratamento no painel administrativo.
 - [ ] v1.0.0: Catálogo nacional ampliado e planos de estudo por edital.
 
 Developed by AK Labs

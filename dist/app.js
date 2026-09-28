@@ -1,6 +1,7 @@
 const $ = (s) => document.querySelector(s);
 const app = $('#app');
 const STORAGE_KEY = 'aklabs-intensivo-if-v1';
+let currentReportContext = null;
 const initial = {state:'',institution:'',level:'integrado',answered:0,correct:0,errors:[],bySubject:{}};
 const progress = Object.assign(initial, JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'));
 const data = window.IF_DATA;
@@ -19,6 +20,32 @@ function toast(message){
   setTimeout(()=>el.classList.remove('show'),2200);
 }
 window.toast = toast;
+
+function openReportModal(context = null){
+  currentReportContext = context;
+  const container = $('#reportModalContainer');
+  const questionInfo = context?.question ? `<div class="report-context"><strong>Questão selecionada</strong><span>${context.question}</span></div>` : '';
+  container.innerHTML = `<div class="report-overlay" role="dialog" aria-modal="true" aria-labelledby="reportTitle"><form id="reportForm" class="report-modal"><div class="report-modal-head"><div><span class="eyebrow">Ajude a melhorar</span><h2 id="reportTitle">Reportar um problema</h2></div><button class="report-close" type="button" aria-label="Fechar">&times;</button></div>${questionInfo}<label>Motivo<select name="category" required><option value="">Selecione</option><option value="question">Erro em uma questão</option><option value="answer">Gabarito incorreto</option><option value="content">Conteúdo ou texto</option><option value="technical">Falha técnica</option><option value="accessibility">Acessibilidade</option><option value="other">Outro motivo</option></select></label><label>Descreva o problema<textarea name="message" rows="5" maxlength="1500" required placeholder="Conte o que aconteceu e, se possível, como reproduzir."></textarea></label><small>O relato será enviado à administração com a tela e a questão relacionadas.</small><div class="report-actions"><button class="btn light report-cancel" type="button">Cancelar</button><button class="btn primary" type="submit">Enviar relato</button></div></form></div>`;
+  const close = () => { container.innerHTML=''; currentReportContext=null; };
+  container.querySelector('.report-close').onclick=close;
+  container.querySelector('.report-cancel').onclick=close;
+  container.querySelector('.report-overlay').onclick=(event)=>{ if(event.target===event.currentTarget)close(); };
+  container.querySelector('#reportForm').onsubmit=async(event)=>{
+    event.preventDefault();
+    const submit=event.submitter; submit.disabled=true; submit.textContent='Enviando...';
+    try {
+      if(!window.cloudSync?.isReady()) throw new Error('Faça login com o Google antes de enviar o relato.');
+      const form=new FormData(event.currentTarget);
+      await window.cloudSync.submitReport({category:form.get('category'),message:String(form.get('message')||'').trim(),page:location.hash||'#home',question:currentReportContext?.question||'',institution:currentReportContext?.institution||'',exam:currentReportContext?.exam||''});
+      close(); toast('Relato enviado para a administração. Obrigado!');
+    } catch(error) {
+      toast(error.message||'Não foi possível enviar o relato.');
+      submit.disabled=false; submit.textContent='Enviar relato';
+    }
+  };
+  container.querySelector('select').focus();
+}
+window.openReportModal=openReportModal;
 window.getProgressState = () => progress;
 window.applyCloudProgress = (cloudProgress) => {
   Object.assign(progress, cloudProgress);
@@ -39,6 +66,7 @@ function route(name,arg){
 window.refreshRoute = () => route(currentRouteName, currentRouteArg);
 document.addEventListener('click',e=>{const b=e.target.closest('[data-route]'); if(b) route(b.dataset.route,b.dataset.arg);});
 $('#menuBtn').onclick=()=>$('#nav').classList.toggle('open');
+$('#reportProblemBtn').onclick=()=>openReportModal();
 
 function home(){
   if(!progress.state) return setup();
@@ -87,7 +115,8 @@ function study(){
 function quiz(subject){
   if(!progress.state)return setup();
   let pool=questionPool().filter(q=>!subject||q.subject===subject); pool=pool.sort(()=>Math.random()-.5).slice(0,Math.min(subject?5:10,pool.length));
-  app.innerHTML=`<div class="shell narrow"><div class="section-title"><div><span class="eyebrow">${subject||'Simulado regional'}</span><h1>${pool.length} questões para avançar</h1><p>Responda tudo e receba a explicação de cada item.</p></div></div><form id="quizForm">${pool.map((q,n)=>`<article class="question"><div class="question-meta"><span>${q.subject}</span><span>${q.institution||q.region}</span></div><h2>${n+1}. ${q.text}</h2><div class="options">${q.options.map((o,i)=>`<label><input type="radio" name="q${n}" value="${i}"><span>${q.optionLabels?.[i]||String.fromCharCode(65+i)}</span>${o}</label>`).join('')}</div></article>`).join('')}<button class="btn primary submit" type="submit">Finalizar simulado</button></form></div>`;
+  app.innerHTML=`<div class="shell narrow"><div class="section-title"><div><span class="eyebrow">${subject||'Simulado regional'}</span><h1>${pool.length} questões para avançar</h1><p>Responda tudo e receba a explicação de cada item.</p></div></div><form id="quizForm">${pool.map((q,n)=>`<article class="question"><div class="question-meta"><span>${q.subject}</span><span>${q.institution||q.region}</span></div><h2>${n+1}. ${q.text}</h2><div class="options">${q.options.map((o,i)=>`<label><input type="radio" name="q${n}" value="${i}"><span>${q.optionLabels?.[i]||String.fromCharCode(65+i)}</span>${o}</label>`).join('')}</div><button class="report-question" type="button" data-report-question="${n}">⚑ Reportar esta questão</button></article>`).join('')}<button class="btn primary submit" type="submit">Finalizar simulado</button></form></div>`;
+  document.querySelectorAll('[data-report-question]').forEach(button=>button.onclick=()=>{const q=pool[Number(button.dataset.reportQuestion)];openReportModal({question:q.text,institution:q.institution,exam:q.exam});});
   $('#quizForm').onsubmit=e=>{e.preventDefault(); const answers=pool.map((q,n)=>e.target.elements['q'+n]?.value); if(answers.some(x=>x===undefined||x===''))return toast('Responda todas as questões.'); let hits=0; pool.forEach((q,n)=>{const ok=Number(answers[n])===q.answer; if(ok)hits++; progress.answered++; progress.correct+=ok?1:0; progress.bySubject[q.subject]=progress.bySubject[q.subject]||{answered:0,correct:0}; progress.bySubject[q.subject].answered++; progress.bySubject[q.subject].correct+=ok?1:0; if(!ok)progress.errors.unshift({text:q.text,answer:q.options[q.answer],explanation:q.explanation});}); progress.errors=progress.errors.slice(0,20); save(); result(pool,answers,hits);};
 }
 

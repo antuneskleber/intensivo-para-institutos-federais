@@ -2,6 +2,14 @@
 
 Todas as mudanças relevantes deste projeto serão documentadas aqui. O formato segue Keep a Changelog e o versionamento segue Semantic Versioning.
 
+## [0.7.0] - 2026-09-28
+
+### Adicionado
+- Botão global para usuários autenticados reportarem erros em questões, gabaritos, conteúdo, acessibilidade ou funcionamento técnico.
+- Atalho contextual em cada questão, incluindo automaticamente enunciado, instituição, prova e tela no relato.
+- Coleção segura `reports` no Firestore, com criação pelo próprio usuário e leitura/gestão exclusiva da administração.
+- Central de relatos no painel administrativo, com filtros, contador de pendências e fluxo para resolver ou reabrir ocorrências.
+
 ## [0.6.0] - 2026-09-28
 
 ### Alterado

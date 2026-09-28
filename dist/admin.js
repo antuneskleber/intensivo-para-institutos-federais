@@ -18,6 +18,7 @@
   const kpiBlockedUsers = document.getElementById("kpiBlockedUsers");
   const kpiTotalQuestions = document.getElementById("kpiTotalQuestions");
   const kpiAverageRate = document.getElementById("kpiAverageRate");
+  const kpiOpenReports = document.getElementById("kpiOpenReports");
 
   const searchInput = document.getElementById("searchInput");
   const statusFilter = document.getElementById("statusFilter");
@@ -25,11 +26,14 @@
   const refreshBtn = document.getElementById("refreshBtn");
   const usersTableBody = document.getElementById("usersTableBody");
   const detailModalContainer = document.getElementById("detailModalContainer");
+  const reportsList = document.getElementById("reportsList");
+  const reportStatusFilter = document.getElementById("reportStatusFilter");
 
   let auth = null;
   let db = null;
   let currentAdmin = null;
   let allStudents = [];
+  let allReports = [];
   const defaultAvatar = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
 
   function toast(msg) {
@@ -43,8 +47,13 @@
 
   function formatDate(timestamp) {
     if (!timestamp) return "Nunca acessou";
-    const d = new Date(timestamp);
+    const value = typeof timestamp.toMillis === "function" ? timestamp.toMillis() : timestamp;
+    const d = new Date(value);
     return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  }
+
+  function escapeHTML(value) {
+    return String(value || "").replace(/[&<>'"]/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[char]));
   }
 
   try {
@@ -86,8 +95,51 @@
       if (adminAvatar) adminAvatar.src = user.photoURL || defaultAvatar;
       if (adminName) adminName.textContent = (user.displayName || "Admin").split(" ")[0];
 
-      loadStudents();
+      loadDashboard();
     });
+
+    async function loadDashboard() {
+      await Promise.all([loadStudents(), loadReports()]);
+    }
+
+    async function loadReports() {
+      reportsList.innerHTML = `<p class="muted">Carregando relatos...</p>`;
+      try {
+        const snap = await getDocs(collection(db, "reports"));
+        allReports = [];
+        snap.forEach(item => allReports.push({ id:item.id, ...item.data() }));
+        allReports.sort((a,b)=>(b.createdAt?.toMillis?.()||b.clientCreatedAt||0)-(a.createdAt?.toMillis?.()||a.clientCreatedAt||0));
+        renderReports();
+        renderKPIs();
+      } catch (err) {
+        console.error("Erro ao carregar relatos:", err);
+        reportsList.innerHTML = `<p class="report-error">Erro ao consultar relatos: ${escapeHTML(err.message)}</p>`;
+      }
+    }
+
+    function renderReports() {
+      const status = reportStatusFilter.value;
+      const categoryLabels = {question:"Erro em questão",answer:"Gabarito incorreto",content:"Conteúdo ou texto",technical:"Falha técnica",accessibility:"Acessibilidade",other:"Outro motivo"};
+      const reports = allReports.filter(report=>status==="all"||report.status===status);
+      if (!reports.length) {
+        reportsList.innerHTML = `<p class="muted">Nenhum relato encontrado neste filtro.</p>`;
+        return;
+      }
+      reportsList.innerHTML = reports.map(report=>`<article class="report-card ${report.status==='resolved'?'resolved':''}"><div class="report-card-head"><div><span class="report-category">${escapeHTML(categoryLabels[report.category]||report.category)}</span><strong>${escapeHTML(report.userName||'Estudante')}</strong><small>${escapeHTML(report.userEmail||'Sem e-mail')} · ${formatDate(report.createdAt||report.clientCreatedAt)}</small></div><span class="status-badge ${report.status==='resolved'?'active':'pending'}">${report.status==='resolved'?'✓ Resolvido':'● Aberto'}</span></div><p>${escapeHTML(report.message)}</p>${report.question?`<div class="report-question-context"><b>Questão:</b> ${escapeHTML(report.question)}${report.institution?`<small>${escapeHTML(report.institution)} · ${escapeHTML(report.exam)}</small>`:''}</div>`:''}<div class="report-card-foot"><small>Tela: ${escapeHTML(report.page||'#home')} · App ${escapeHTML(report.appVersion||'')}</small><button class="btn-sm" onclick="window.toggleReportStatus('${report.id}','${report.status==='resolved'?'open':'resolved'}')">${report.status==='resolved'?'Reabrir':'Marcar como resolvido'}</button></div></article>`).join('');
+    }
+
+    window.toggleReportStatus = async function(reportId, status) {
+      try {
+        await setDoc(doc(db,"reports",reportId), {status, reviewedAt:Date.now(), reviewedBy:currentAdmin.email}, {merge:true});
+        const report=allReports.find(item=>item.id===reportId);
+        if(report) report.status=status;
+        renderReports(); renderKPIs();
+        toast(status==='resolved'?'Relato marcado como resolvido.':'Relato reaberto.');
+      } catch(err) {
+        console.error("Erro ao atualizar relato:",err);
+        toast("Erro ao atualizar relato: "+err.message);
+      }
+    };
 
     async function loadStudents() {
       try {
@@ -140,6 +192,7 @@
       kpiBlockedUsers.textContent = blocked;
       kpiTotalQuestions.textContent = totalQ;
       kpiAverageRate.textContent = `${avgRate}%`;
+      kpiOpenReports.textContent = allReports.filter(report=>report.status!=="resolved").length;
     }
 
     function renderTable() {
@@ -312,7 +365,8 @@
     searchInput.addEventListener("input", renderTable);
     statusFilter.addEventListener("change", renderTable);
     sortBy.addEventListener("change", renderTable);
-    refreshBtn.addEventListener("click", loadStudents);
+    refreshBtn.addEventListener("click", loadDashboard);
+    reportStatusFilter.addEventListener("change", renderReports);
 
     gateLoginBtn.addEventListener("click", async () => {
       try {

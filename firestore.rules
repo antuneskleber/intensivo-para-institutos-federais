@@ -21,5 +21,16 @@ service cloud.firestore {
         (request.auth.uid == userId && (resource == null || resource.data.status != 'blocked'))
       );
     }
+
+    match /reports/{reportId} {
+      allow create: if request.auth != null
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == 'open'
+        && request.resource.data.category in ['question', 'answer', 'content', 'technical', 'accessibility', 'other']
+        && request.resource.data.message is string
+        && request.resource.data.message.size() > 0
+        && request.resource.data.message.size() <= 1500;
+      allow read, update, delete: if isAdmin();
+    }
   }
 }

@@ -7,8 +7,8 @@
   <meta name="description" content="Dashboard de controle de acesso e acompanhamento pedagógico - IFintenso.">
   <title>Painel de Controle de Acesso · IFintenso</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="admin.css">
+  <link rel="stylesheet" href="styles.css?v=0.7.0">
+  <link rel="stylesheet" href="admin.css?v=0.7.0">
 </head>
 <body>
   <header class="topbar">
@@ -84,6 +84,23 @@
             <div id="kpiAverageRate" class="stat" style="color: #0d9488;">0%</div>
             <div class="subtext">Geral dos alunos</div>
           </div>
+          <div class="kpi-card">
+            <small>Relatos Abertos</small>
+            <div id="kpiOpenReports" class="stat" style="color: #b45309;">0</div>
+            <div class="subtext">Aguardando análise</div>
+          </div>
+        </section>
+
+        <section class="reports-panel">
+          <div class="reports-heading">
+            <div><span class="eyebrow">Feedback dos usuários</span><h2>Relatos de problemas</h2></div>
+            <select id="reportStatusFilter" class="filter-select" aria-label="Filtrar relatos por status">
+              <option value="all">Todos</option>
+              <option value="open">Abertos</option>
+              <option value="resolved">Resolvidos</option>
+            </select>
+          </div>
+          <div id="reportsList" class="reports-list"><p class="muted">Carregando relatos...</p></div>
         </section>
 
         <!-- Filtros e Busca -->
@@ -136,7 +153,7 @@
   <div id="detailModalContainer"></div>
   <div id="toast" role="status" aria-live="polite"></div>
 
-  <script src="firebase-config.js"></script>
-  <script src="admin.js"></script>
+  <script src="firebase-config.js?v=0.7.0"></script>
+  <script src="admin.js?v=0.7.0"></script>
 </body>
 </html>

@@ -58,14 +58,14 @@
 
   if (!isConfigured) {
     if (loginBtn) loginBtn.addEventListener("click", showSetupModal);
-    window.cloudSync = { isReady: () => false, scheduleSave: () => {} };
+    window.cloudSync = { isReady: () => false, scheduleSave: () => {}, submitReport: async () => { throw new Error("Faça login com o Google antes de enviar o relato."); } };
     return;
   }
 
   try {
     const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
     const { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
-    const { getFirestore, doc, getDoc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    const { getFirestore, doc, getDoc, setDoc, collection, addDoc, serverTimestamp } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
 
     const app = initializeApp(config);
     auth = getAuth(app);
@@ -138,6 +138,26 @@
         saveTimeout = setTimeout(() => {
           syncToCloud(progress);
         }, 1200);
+      },
+      submitReport: async (report) => {
+        if (!currentUser || !db) throw new Error("Faça login com o Google antes de enviar o relato.");
+        const message = String(report.message || "").trim();
+        if (!message || message.length > 1500) throw new Error("Descreva o problema em até 1500 caracteres.");
+        await addDoc(collection(db, "reports"), {
+          uid: currentUser.uid,
+          userEmail: currentUser.email || "",
+          userName: currentUser.displayName || "Estudante",
+          category: String(report.category || "other"),
+          message,
+          page: String(report.page || "#home"),
+          question: String(report.question || ""),
+          institution: String(report.institution || ""),
+          exam: String(report.exam || ""),
+          status: "open",
+          createdAt: serverTimestamp(),
+          clientCreatedAt: Date.now(),
+          appVersion: "0.7.0"
+        });
       }
     };
 
