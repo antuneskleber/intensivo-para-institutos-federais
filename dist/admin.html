@@ -7,8 +7,8 @@
   <meta name="description" content="Dashboard de controle de acesso e acompanhamento pedagógico - IFintenso.">
   <title>Painel de Controle de Acesso · IFintenso</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <link rel="stylesheet" href="styles.css?v=0.7.1">
-  <link rel="stylesheet" href="admin.css?v=0.7.1">
+  <link rel="stylesheet" href="styles.css?v=0.7.2">
+  <link rel="stylesheet" href="admin.css?v=0.7.2">
 </head>
 <body>
   <header class="topbar">
@@ -46,6 +46,7 @@
       </div>
 
       <div id="dashboardView" class="hidden">
+        <div id="readOnlyBanner" class="read-only-banner hidden">👁 Modo somente leitura — alterações de usuários, atributos e relatos estão desativadas para esta conta.</div>
         <div class="admin-header">
           <div>
             <span class="eyebrow">Gestão de Estudantes</span>
@@ -153,7 +154,7 @@
   <div id="detailModalContainer"></div>
   <div id="toast" role="status" aria-live="polite"></div>
 
-  <script src="firebase-config.js?v=0.7.1"></script>
-  <script src="admin.js?v=0.7.1"></script>
+  <script src="firebase-config.js?v=0.7.2"></script>
+  <script src="admin.js?v=0.7.2"></script>
 </body>
 </html>

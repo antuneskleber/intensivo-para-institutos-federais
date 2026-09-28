@@ -2,6 +2,13 @@
 
 Todas as mudanças relevantes deste projeto serão documentadas aqui. O formato segue Keep a Changelog e o versionamento segue Semantic Versioning.
 
+## [0.7.2] - 2026-09-28
+
+### Adicionado
+- Perfil administrativo somente leitura para `mariecristinefortesrocha@gmail.com`.
+- Proteção no Firestore que permite consultar usuários e relatos, mas bloqueia criação, edição, exclusão e alteração de qualquer registro por essa conta.
+- Identificação visual de modo leitura e remoção dos controles de bloqueio, liberação e tratamento de relatos.
+
 ## [0.7.1] - 2026-09-28
 
 ### Corrigido

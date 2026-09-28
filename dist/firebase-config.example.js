@@ -17,3 +17,7 @@ window.FIREBASE_CONFIG = {
 window.ADMIN_EMAILS = [
   "seu-email@gmail.com"
 ];
+
+window.READ_ONLY_ADMIN_EMAILS = [
+  "leitura@exemplo.com"
+];

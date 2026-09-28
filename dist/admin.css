@@ -420,6 +420,8 @@
 .report-card-foot { margin-top: 13px; }
 .status-badge.pending { background: #fff3cd; color: #8a5b00; }
 .report-error { color: var(--red); }
+.read-only-banner { margin-bottom: 20px; padding: 13px 16px; border: 1px solid #bfdbfe; border-radius: 12px; background: #eff6ff; color: #1e40af; font-size: .88rem; font-weight: 750; }
+.read-only-label { display: inline-flex; align-items: center; padding: 6px 10px; border-radius: 999px; background: #e8eef5; color: #475569; font-size: .76rem; font-weight: 800; }
 
 @media (max-width: 680px) {
   .reports-heading,.report-card-head,.report-card-foot { align-items: stretch; flex-direction: column; }

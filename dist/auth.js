@@ -159,7 +159,7 @@
           status: "open",
           createdAt: serverTimestamp(),
           clientCreatedAt: Date.now(),
-          appVersion: "0.7.1"
+          appVersion: "0.7.2"
         });
       }
     };
@@ -182,7 +182,8 @@
 
         // Verifica permissão de Administrador
         const adminList = window.ADMIN_EMAILS || ["djkleber@gmail.com"];
-        const isAdmin = adminList.includes(user.email);
+        const readOnlyAdminList = window.READ_ONLY_ADMIN_EMAILS || [];
+        const isAdmin = adminList.includes(user.email) || readOnlyAdminList.includes(user.email);
         let adminLink = document.getElementById("adminPanelLink");
         if (isAdmin) {
           if (!adminLink) {

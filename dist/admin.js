@@ -2,6 +2,7 @@
 (async function () {
   const config = window.FIREBASE_CONFIG;
   const adminEmails = window.ADMIN_EMAILS || ["djkleber@gmail.com"];
+  const readOnlyAdminEmails = window.READ_ONLY_ADMIN_EMAILS || [];
 
   const loadingState = document.getElementById("loadingState");
   const authGate = document.getElementById("authGate");
@@ -12,6 +13,7 @@
   const adminAvatar = document.getElementById("adminAvatar");
   const adminName = document.getElementById("adminName");
   const adminLogoutBtn = document.getElementById("adminLogoutBtn");
+  const readOnlyBanner = document.getElementById("readOnlyBanner");
 
   const kpiTotalUsers = document.getElementById("kpiTotalUsers");
   const kpiActiveUsers = document.getElementById("kpiActiveUsers");
@@ -32,6 +34,7 @@
   let auth = null;
   let db = null;
   let currentAdmin = null;
+  let currentCanWrite = false;
   let allStudents = [];
   let allReports = [];
   const defaultAvatar = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
@@ -78,8 +81,9 @@
         return;
       }
 
-      const isAdmin = adminEmails.includes(user.email);
-      if (!isAdmin) {
+      const isFullAdmin = adminEmails.includes(user.email);
+      const isReadOnlyAdmin = readOnlyAdminEmails.includes(user.email);
+      if (!isFullAdmin && !isReadOnlyAdmin) {
         dashboardView.classList.add("hidden");
         adminProfile.classList.add("hidden");
         authGate.classList.remove("hidden");
@@ -91,9 +95,11 @@
       authGate.classList.add("hidden");
       dashboardView.classList.remove("hidden");
       adminProfile.classList.remove("hidden");
+      currentCanWrite = isFullAdmin;
+      readOnlyBanner.classList.toggle("hidden", currentCanWrite);
 
       if (adminAvatar) adminAvatar.src = user.photoURL || defaultAvatar;
-      if (adminName) adminName.textContent = (user.displayName || "Admin").split(" ")[0];
+      if (adminName) adminName.textContent = `${(user.displayName || "Admin").split(" ")[0]}${isReadOnlyAdmin ? " · Leitura" : ""}`;
 
       loadDashboard();
     });
@@ -125,10 +131,11 @@
         reportsList.innerHTML = `<p class="muted">Nenhum relato encontrado neste filtro.</p>`;
         return;
       }
-      reportsList.innerHTML = reports.map(report=>`<article class="report-card ${report.status==='resolved'?'resolved':''}"><div class="report-card-head"><div><span class="report-category">${escapeHTML(categoryLabels[report.category]||report.category)}</span><strong>${escapeHTML(report.userName||'Estudante')}</strong><small>${escapeHTML(report.userEmail||'Sem e-mail')} · ${formatDate(report.createdAt||report.clientCreatedAt)}</small></div><span class="status-badge ${report.status==='resolved'?'active':'pending'}">${report.status==='resolved'?'✓ Resolvido':'● Aberto'}</span></div><p>${escapeHTML(report.message)}</p>${report.question?`<div class="report-question-context"><b>Questão:</b> ${escapeHTML(report.question)}${report.institution?`<small>${escapeHTML(report.institution)} · ${escapeHTML(report.exam)}</small>`:''}</div>`:''}<div class="report-card-foot"><small>Tela: ${escapeHTML(report.page||'#home')} · App ${escapeHTML(report.appVersion||'')}</small><button class="btn-sm" onclick="window.toggleReportStatus('${report.id}','${report.status==='resolved'?'open':'resolved'}')">${report.status==='resolved'?'Reabrir':'Marcar como resolvido'}</button></div></article>`).join('');
+      reportsList.innerHTML = reports.map(report=>`<article class="report-card ${report.status==='resolved'?'resolved':''}"><div class="report-card-head"><div><span class="report-category">${escapeHTML(categoryLabels[report.category]||report.category)}</span><strong>${escapeHTML(report.userName||'Estudante')}</strong><small>${escapeHTML(report.userEmail||'Sem e-mail')} · ${formatDate(report.createdAt||report.clientCreatedAt)}</small></div><span class="status-badge ${report.status==='resolved'?'active':'pending'}">${report.status==='resolved'?'✓ Resolvido':'● Aberto'}</span></div><p>${escapeHTML(report.message)}</p>${report.question?`<div class="report-question-context"><b>Questão:</b> ${escapeHTML(report.question)}${report.institution?`<small>${escapeHTML(report.institution)} · ${escapeHTML(report.exam)}</small>`:''}</div>`:''}<div class="report-card-foot"><small>Tela: ${escapeHTML(report.page||'#home')} · App ${escapeHTML(report.appVersion||'')}</small>${currentCanWrite?`<button class="btn-sm" onclick="window.toggleReportStatus('${report.id}','${report.status==='resolved'?'open':'resolved'}')">${report.status==='resolved'?'Reabrir':'Marcar como resolvido'}</button>`:'<span class="read-only-label">Somente leitura</span>'}</div></article>`).join('');
     }
 
     window.toggleReportStatus = async function(reportId, status) {
+      if (!currentCanWrite) return toast("Esta conta possui acesso somente de leitura.");
       try {
         await setDoc(doc(db,"reports",reportId), {status, reviewedAt:Date.now(), reviewedBy:currentAdmin.email}, {merge:true});
         const report=allReports.find(item=>item.id===reportId);
@@ -262,9 +269,7 @@
             </td>
             <td>
               <div class="action-buttons">
-                <button class="btn-sm ${isBlocked ? 'btn-unblock' : 'btn-block'}" onclick="window.toggleUserStatus('${u.id}', '${isBlocked ? 'active' : 'blocked'}')">
-                  ${isBlocked ? 'Liberar Acesso' : 'Bloquear'}
-                </button>
+                ${currentCanWrite?`<button class="btn-sm ${isBlocked ? 'btn-unblock' : 'btn-block'}" onclick="window.toggleUserStatus('${u.id}', '${isBlocked ? 'active' : 'blocked'}')">${isBlocked ? 'Liberar Acesso' : 'Bloquear'}</button>`:''}
                 <button class="btn-sm" onclick="window.openDetailModal('${u.id}')">
                   Detalhes
                 </button>
@@ -276,6 +281,7 @@
     }
 
     window.toggleUserStatus = async function (userId, newStatus) {
+      if (!currentCanWrite) return toast("Esta conta possui acesso somente de leitura.");
       try {
         const student = allStudents.find(u => u.id === userId);
         const actionText = newStatus === "blocked" ? "bloquear" : "liberar";
@@ -322,9 +328,7 @@
                 <div>
                   Status Atual: <span class="status-badge ${isBlocked ? 'blocked' : 'active'}">${isBlocked ? '🚫 Bloqueado' : '🟢 Ativo (Liberado)'}</span>
                 </div>
-                <button class="btn-sm ${isBlocked ? 'btn-unblock' : 'btn-block'}" onclick="window.toggleUserStatus('${u.id}', '${isBlocked ? 'active' : 'blocked'}'); window.closeDetailModal();">
-                  ${isBlocked ? 'Desbloquear Aluno' : 'Suspender Aluno'}
-                </button>
+                ${currentCanWrite?`<button class="btn-sm ${isBlocked ? 'btn-unblock' : 'btn-block'}" onclick="window.toggleUserStatus('${u.id}', '${isBlocked ? 'active' : 'blocked'}'); window.closeDetailModal();">${isBlocked ? 'Desbloquear Aluno' : 'Suspender Aluno'}</button>`:'<span class="read-only-label">Somente leitura</span>'}
               </div>
             </div>
 

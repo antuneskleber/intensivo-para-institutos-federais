@@ -23,6 +23,7 @@ Permitir que cada estudante acesse um banco geral de questões, estude por área
   - **Cloud Firestore:** Sincronização contínua dos simulados, histórico de erros e desempenho do estudante.
   - **Smart Merge:** Dados locais anteriores são mesclados com a conta autenticada sem perda de progresso.
 - **Painel de Controle de Acesso (`admin.html`):** Dashboard exclusivo para administradores com métricas de desempenho e controle de suspensão/liberação de acesso com 1 clique.
+  - Administradores de leitura podem consultar o painel sem permissão para criar, editar ou excluir usuários, atributos e relatos.
 
 ---
 
@@ -105,6 +106,7 @@ Painel Admin: `https://ifintenso.web.app/admin.html`
 - [x] v0.6.0: Banco substituído pelas questões do compilado de IFRS, IFSul e IFFar, com rastreabilidade por prova.
 - [x] v0.7.0: Reporte de falhas pelos usuários e central de tratamento no painel administrativo.
 - [x] v0.7.1: Acesso geral sem seleção de estado e login Google obrigatório.
+- [x] v0.7.2: Perfil administrativo somente leitura protegido pelas regras do Firestore.
 - [ ] v1.0.0: Catálogo nacional ampliado e planos de estudo por edital.
 
 Developed by AK Labs
