@@ -17,6 +17,7 @@
   const userName = document.getElementById("userName");
   const syncStatus = document.getElementById("syncStatus");
   const logoutBtn = document.getElementById("logoutBtn");
+  const reportProblemBtn = document.getElementById("reportProblemBtn");
 
   function setSyncStatus(text, icon = "☁️", isPending = false) {
     if (!syncStatus) return;
@@ -58,7 +59,8 @@
 
   if (!isConfigured) {
     if (loginBtn) loginBtn.addEventListener("click", showSetupModal);
-    window.cloudSync = { isReady: () => false, scheduleSave: () => {}, submitReport: async () => { throw new Error("Faça login com o Google antes de enviar o relato."); } };
+    window.cloudSync = { isReady: () => false, getUser: () => null, scheduleSave: () => {}, submitReport: async () => { throw new Error("Faça login com o Google antes de enviar o relato."); } };
+    if (typeof window.refreshRoute === "function") window.refreshRoute();
     return;
   }
 
@@ -131,6 +133,7 @@
 
     window.cloudSync = {
       isReady: () => !!currentUser,
+      getUser: () => currentUser ? { displayName: currentUser.displayName, email: currentUser.email, photoURL: currentUser.photoURL } : null,
       scheduleSave: (progress) => {
         if (!currentUser) return;
         setSyncStatus("Salvando...", "⏳", true);
@@ -156,7 +159,7 @@
           status: "open",
           createdAt: serverTimestamp(),
           clientCreatedAt: Date.now(),
-          appVersion: "0.7.0"
+          appVersion: "0.7.1"
         });
       }
     };
@@ -175,6 +178,7 @@
         if (userName) {
           userName.textContent = (user.displayName || "Estudante").split(" ")[0];
         }
+        if (reportProblemBtn) reportProblemBtn.classList.remove("hidden");
 
         // Verifica permissão de Administrador
         const adminList = window.ADMIN_EMAILS || ["djkleber@gmail.com"];
@@ -246,12 +250,15 @@
           console.error("Erro ao carregar dados do usuário:", err);
           setSyncStatus("Offline / Local", "📱", false);
         }
+        if (typeof window.refreshRoute === "function") window.refreshRoute();
       } else {
         if (loginBtn) loginBtn.classList.remove("hidden");
         if (userProfile) userProfile.classList.add("hidden");
         const adminLink = document.getElementById("adminPanelLink");
         if (adminLink) adminLink.classList.add("hidden");
+        if (reportProblemBtn) reportProblemBtn.classList.add("hidden");
         setSyncStatus("", "");
+        if (typeof window.refreshRoute === "function") window.refreshRoute();
       }
     });
 

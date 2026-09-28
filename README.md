@@ -1,10 +1,10 @@
 # IFintenso
 
-Plataforma de preparação regionalizada para processos seletivos dos Institutos Federais brasileiros.
+Plataforma nacional de preparação para processos seletivos dos Institutos Federais brasileiros.
 
 ## Objetivo
 
-Permitir que cada estudante escolha o estado e a instituição onde pretende fazer a prova, estude por área, acompanhe o próprio desempenho e acesse provas e gabaritos oficiais da sua região.
+Permitir que cada estudante acesse um banco geral de questões, estude por área, acompanhe o próprio desempenho e consulte provas e gabaritos oficiais dos Institutos Federais.
 
 ## Público-alvo
 
@@ -17,11 +17,11 @@ Permitir que cada estudante escolha o estado e a instituição onde pretende faz
 ## Stack e Arquitetura
 
 - **Frontend:** HTML5 semântico, CSS3 responsivo e JavaScript ES6+ puro, sem dependências de build ou bundlers.
-- **Arquitetura Local-First:** O app funciona 100% offline e sem login, gravando preferências e respostas no `localStorage`.
+- **Acesso autenticado:** O login com Google é obrigatório antes do acesso ao conteúdo e aos simulados.
 - **Autenticação & Nuvem (Firebase):**
   - **Google Sign-In:** Login com 1 clique usando popup OAuth oficial do Google.
-  - **Cloud Firestore:** Sincronização contínua do estado, simulados, histórico de erros e instituição escolhida.
-  - **Smart Merge:** O estudante pode começar no computador sem login; ao entrar com o Google, os dados locais são mesclados com a nuvem sem perda.
+  - **Cloud Firestore:** Sincronização contínua dos simulados, histórico de erros e desempenho do estudante.
+  - **Smart Merge:** Dados locais anteriores são mesclados com a conta autenticada sem perda de progresso.
 - **Painel de Controle de Acesso (`admin.html`):** Dashboard exclusivo para administradores com métricas de desempenho e controle de suspensão/liberação de acesso com 1 clique.
 
 ---
@@ -48,7 +48,7 @@ A plataforma conta com um dashboard administrativo completo localizado em [`dist
 
 ### Recursos do Painel:
 - **Métricas Globais:** Total de estudantes, alunos ativos, alunos bloqueados, total de questões resolvidas e média geral de acertos.
-- **Acompanhamento Regional:** Visualização da UF e Instituto Federal escolhido por cada estudante.
+- **Acompanhamento Pedagógico:** Visualização do desempenho geral de cada estudante autenticado.
 - **Controle de Acesso em Tempo Real:** Botão para **Bloquear** ou **Liberar** o acesso de qualquer estudante com 1 clique.
 - **Busca e Filtros:** Pesquisa instantânea por nome, e-mail, UF ou instituição.
 - **Acompanhamento Pedagógico Individual:** Visualização dos erros recentes e desempenho por matéria de cada aluno.
@@ -104,6 +104,7 @@ Painel Admin: `https://ifintenso.web.app/admin.html`
 - [x] v0.5.0: Registro nacional das fontes oficiais dos 38 Institutos Federais e política de ingestão do banco de questões.
 - [x] v0.6.0: Banco substituído pelas questões do compilado de IFRS, IFSul e IFFar, com rastreabilidade por prova.
 - [x] v0.7.0: Reporte de falhas pelos usuários e central de tratamento no painel administrativo.
+- [x] v0.7.1: Acesso geral sem seleção de estado e login Google obrigatório.
 - [ ] v1.0.0: Catálogo nacional ampliado e planos de estudo por edital.
 
 Developed by AK Labs

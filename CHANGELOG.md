@@ -2,6 +2,13 @@
 
 Todas as mudanças relevantes deste projeto serão documentadas aqui. O formato segue Keep a Changelog e o versionamento segue Semantic Versioning.
 
+## [0.7.1] - 2026-09-28
+
+### Corrigido
+- Removida a tela antiga de seleção de estado, instituição e modalidade.
+- Restaurado o catálogo geral de questões e acervos para todos os estudantes.
+- Restaurado o login Google obrigatório antes do acesso ao conteúdo, simulados e progresso.
+
 ## [0.7.0] - 2026-09-28
 
 ### Adicionado

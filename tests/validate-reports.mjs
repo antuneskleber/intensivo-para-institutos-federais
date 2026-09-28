@@ -17,5 +17,9 @@ assert.match(adminHtml, /id="reportsList"/, 'Central de relatos ausente no paine
 assert.match(admin, /toggleReportStatus/, 'Fluxo de tratamento dos relatos ausente.');
 assert.match(rules, /match \/reports\/\{reportId\}/, 'Regras da coleção reports ausentes.');
 assert.match(rules, /allow read, update, delete: if isAdmin\(\)/, 'Acesso administrativo aos relatos não está protegido.');
+assert.match(app, /function loginRequired\(\)/, 'Tela de login obrigatório ausente.');
+assert.match(app, /if\(!window\.cloudSync\?\.isReady\(\)\)/, 'Rotas não estão protegidas por autenticação.');
+assert.doesNotMatch(app, /id="stateSelect"/, 'A seleção regional antiga foi reintroduzida.');
+assert.doesNotMatch(app, /function setup\(\)/, 'Fluxo antigo de configuração regional ainda existe.');
 
 console.log('Fluxo de relatos válido: usuário, Firestore e painel administrativo conectados.');
