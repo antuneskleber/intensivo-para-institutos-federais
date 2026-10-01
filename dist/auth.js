@@ -18,6 +18,7 @@
   const userName = document.getElementById("userName");
   const syncStatus = document.getElementById("syncStatus");
   const logoutBtn = document.getElementById("logoutBtn");
+  const reportProblemBtn = document.getElementById("reportProblemBtn");
 
   function setSyncStatus(text, isPending = false) {
     if (!syncStatus) return;
@@ -59,14 +60,20 @@
 
   if (!isConfigured) {
     if (loginBtn) loginBtn.addEventListener("click", showSetupModal);
-    window.cloudSync = { isReady: () => false, scheduleSave: () => {} };
+    window.cloudSync = {
+      isReady: () => false,
+      getUser: () => null,
+      scheduleSave: () => {},
+      submitReport: async () => { throw new Error("Faça login com o Google antes de enviar o relato."); }
+    };
+    if (typeof window.refreshRoute === "function") window.refreshRoute();
     return;
   }
 
   try {
     const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
     const { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
-    const { getFirestore, doc, getDoc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    const { getFirestore, doc, getDoc, setDoc, collection, addDoc, serverTimestamp } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
 
     const app = initializeApp(config);
     auth = getAuth(app);
@@ -132,6 +139,7 @@
 
     window.cloudSync = {
       isReady: () => !!currentUser,
+      getUser: () => currentUser ? { uid: currentUser.uid, displayName: currentUser.displayName, email: currentUser.email, photoURL: currentUser.photoURL } : null,
       scheduleSave: (progress) => {
         if (!currentUser) return;
         setSyncStatus("Salvando...", true);
@@ -139,6 +147,26 @@
         saveTimeout = setTimeout(() => {
           syncToCloud(progress);
         }, 1200);
+      },
+      submitReport: async (report) => {
+        if (!currentUser || !db) throw new Error("Faça login com o Google antes de enviar o relato.");
+        const message = String(report.message || "").trim();
+        if (!message || message.length > 1500) throw new Error("Descreva o problema em até 1500 caracteres.");
+        await addDoc(collection(db, "reports"), {
+          uid: currentUser.uid,
+          userEmail: currentUser.email || "",
+          userName: currentUser.displayName || "Estudante",
+          category: String(report.category || "other"),
+          message,
+          page: String(report.page || "#home"),
+          questionId: String(report.questionId || ""),
+          question: String(report.question || ""),
+          institution: String(report.institution || ""),
+          exam: String(report.exam || ""),
+          status: "open",
+          createdAt: serverTimestamp(),
+          clientCreatedAt: Date.now()
+        });
       }
     };
 
@@ -151,6 +179,7 @@
         if (typeof window.useIFAccount === 'function') window.useIFAccount(user.uid);
         if (loginBtn) loginBtn.classList.add("hidden");
         if (userProfile) userProfile.classList.remove("hidden");
+        if (reportProblemBtn) reportProblemBtn.classList.remove("hidden");
         if (userAvatar) {
           userAvatar.src = user.photoURL || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2366758a'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
           userAvatar.alt = user.displayName || "Usuário";
@@ -161,7 +190,8 @@
 
         // Verifica permissão de Administrador
         const adminList = window.ADMIN_EMAILS || ["djkleber@gmail.com"];
-        const isAdmin = adminList.includes(user.email);
+        const readOnlyAdminList = window.READ_ONLY_ADMIN_EMAILS || ["mariecristinefortesrocha@gmail.com"];
+        const isAdmin = adminList.includes(user.email) || readOnlyAdminList.includes(user.email);
         let adminLink = document.getElementById("adminPanelLink");
         if (isAdmin) {
           if (!adminLink) {
@@ -236,9 +266,11 @@
         previouslySignedIn = false;
         if (loginBtn) loginBtn.classList.remove("hidden");
         if (userProfile) userProfile.classList.add("hidden");
+        if (reportProblemBtn) reportProblemBtn.classList.add("hidden");
         const adminLink = document.getElementById("adminPanelLink");
         if (adminLink) adminLink.classList.add("hidden");
         setSyncStatus("", "");
+        if (typeof window.refreshRoute === "function") window.refreshRoute();
       }
     });
 
@@ -248,17 +280,18 @@
           loginBtn.disabled = true;
           loginBtn.style.opacity = "0.7";
           const provider = new GoogleAuthProvider();
+          provider.setCustomParameters({ prompt: "select_account" });
           await signInWithPopup(auth, provider);
         } catch (err) {
-          console.error("Erro no login:", err);
-          if (err.code !== "auth/popup-closed-by-user" && typeof window.toast === "function") {
-            window.toast("Não foi possível conectar com o Google.");
+          console.error("Erro ao logar com Google:", err);
+          if (err.code !== "auth/popup-closed-by-user") {
+            if (typeof window.toast === "function") {
+              window.toast("Falha na autenticação com Google. Tente novamente.");
+            }
           }
         } finally {
-          if (loginBtn) {
-            loginBtn.disabled = false;
-            loginBtn.style.opacity = "1";
-          }
+          loginBtn.disabled = false;
+          loginBtn.style.opacity = "1";
         }
       });
     }
@@ -275,9 +308,13 @@
         }
       });
     }
-
-  } catch (err) {
-    console.error("Falha ao inicializar o Firebase:", err);
-    if (loginBtn) loginBtn.addEventListener("click", showSetupModal);
+  } catch (e) {
+    console.error("Erro ao inicializar Firebase Auth / Firestore:", e);
+    window.cloudSync = {
+      isReady: () => false,
+      getUser: () => null,
+      scheduleSave: () => {},
+      submitReport: async () => { throw new Error("Serviço em nuvem indisponível."); }
+    };
   }
 })();

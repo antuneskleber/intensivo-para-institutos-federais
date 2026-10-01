@@ -2,13 +2,13 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#063b35">
   <meta name="description" content="Dashboard de controle de acesso e acompanhamento pedagógico - IFintenso.">
   <title>Painel de Controle de Acesso · IFintenso</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <link rel="stylesheet" href="styles.css?v=0.8.0">
-  <link rel="stylesheet" href="admin.css?v=0.8.0">
+  <link rel="stylesheet" href="styles.css?v=1.0.0">
+  <link rel="stylesheet" href="admin.css?v=1.0.0">
   <script>
     (function(){
       try {
@@ -32,7 +32,7 @@
 
     <div class="topbar-actions">
       <button id="themeToggleBtn" class="btn-theme-toggle" aria-label="Alternar modo escuro" title="Alternar modo escuro"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></button>
-      <a href="index.html" class="btn light" style="font-size: 0.82rem; padding: 8px 14px; text-decoration: none;">← Voltar ao App</a>
+      <a href="index.html" class="btn light" style="font-size: 0.82rem; padding: 8px 14px; text-decoration: none;">&larr; Voltar ao App</a>
       <div id="adminProfile" class="user-profile hidden">
         <img id="adminAvatar" class="user-avatar" src="" alt="Admin">
         <span id="adminName" class="user-name"></span>
@@ -60,6 +60,7 @@
       </div>
 
       <div id="dashboardView" class="hidden">
+        <div id="readOnlyBanner" class="read-only-banner hidden">Modo somente leitura — alterações de usuários, atributos e relatos estão desativadas para esta conta.</div>
         <div class="admin-header">
           <div>
             <span class="eyebrow">Gestão de Estudantes</span>
@@ -91,13 +92,34 @@
           <div class="kpi-card">
             <small>Questões Resolvidas</small>
             <div id="kpiTotalQuestions" class="stat" style="color: var(--forest);">0</div>
-            <div class="subtext">Nos simulados regionais</div>
+            <div class="subtext">Nos simulados oficiais</div>
           </div>
           <div class="kpi-card">
             <small>Média de Acertos</small>
             <div id="kpiAverageRate" class="stat" style="color: #0d9488;">0%</div>
             <div class="subtext">Geral dos alunos</div>
           </div>
+          <div class="kpi-card">
+            <small>Relatos Abertos</small>
+            <div id="kpiOpenReports" class="stat" style="color: #b45309;">0</div>
+            <div class="subtext">Aguardando análise</div>
+          </div>
+        </section>
+
+        <!-- Central de Relatos -->
+        <section class="reports-panel">
+          <div class="reports-heading">
+            <div>
+              <span class="eyebrow">Feedback dos usuários</span>
+              <h2>Relatos de problemas</h2>
+            </div>
+            <select id="reportStatusFilter" class="filter-select" aria-label="Filtrar relatos por status">
+              <option value="all">Todos</option>
+              <option value="open">Abertos</option>
+              <option value="resolved">Resolvidos</option>
+            </select>
+          </div>
+          <div id="reportsList" class="reports-list"><p class="muted">Carregando relatos...</p></div>
         </section>
 
         <!-- Filtros e Busca -->
@@ -150,7 +172,7 @@
   <div id="detailModalContainer"></div>
   <div id="toast" role="status" aria-live="polite"></div>
 
-  <script src="firebase-config.js"></script>
-  <script src="admin.js"></script>
+  <script src="firebase-config.js?v=1.0.0"></script>
+  <script src="admin.js?v=1.0.0"></script>
 </body>
 </html>

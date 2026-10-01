@@ -119,5 +119,52 @@
 [data-theme="dark"] .login-feature-strip{border-top-color:#262626}
 [data-theme="dark"] .login-feature-strip strong{color:var(--lime)}
 
+/* ============================================================
+   TEXTO DE APOIO & CADERNOS DE PROVAS
+   ============================================================ */
+.question-support{background:rgba(6,59,53,.04);border-left:4px solid var(--forest);padding:14px 18px;margin-bottom:18px}
+.question-support .support-title{display:block;font-size:.78rem;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:var(--forest);margin-bottom:6px}
+.question-support blockquote{margin:0;font-size:.92rem;line-height:1.6;color:var(--ink);font-style:italic}
+[data-theme="dark"] .question-support{background:#111111;border-left-color:var(--lime)}
+[data-theme="dark"] .question-support .support-title{color:var(--lime)}
+[data-theme="dark"] .question-support blockquote{color:#e0e0e0}
 
+.exam-cadernos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-top:16px}
+.caderno-card{background:#fff;border:1px solid var(--line);padding:22px;display:flex;flex-direction:column;gap:10px;box-shadow:var(--shadow);transition:transform .15s}
+.caderno-card:hover{transform:translateY(-2px)}
+.caderno-header{display:flex;justify-content:space-between;align-items:center}
+.badge-inst{font-size:.75rem;font-weight:900;background:var(--forest);color:#fff;padding:3px 8px;letter-spacing:.05em}
+.badge-year{font-size:.75rem;font-weight:800;color:var(--muted)}
+.caderno-card h3{margin:4px 0 0;font-size:1.1rem;color:var(--ink)}
+.caderno-card p{margin:0;font-size:.85rem;color:var(--muted);line-height:1.45;flex-grow:1}
+.caderno-card .btn{margin-top:8px;text-align:center;justify-content:center}
+[data-theme="dark"] .caderno-card{background:#0d0d0d;border-color:#262626}
+[data-theme="dark"] .badge-inst{background:var(--forest2);color:#fff}
 
+/* ============================================================
+   CANAL DE RELATOS & MODAL
+   ============================================================ */
+.report-fab{position:fixed;right:20px;bottom:20px;z-index:90;border:0;padding:12px 18px;background:var(--forest);color:#fff;font:inherit;font-size:.84rem;font-weight:800;cursor:pointer;box-shadow:0 8px 24px rgba(6,59,53,.3)}
+.report-fab:hover{background:var(--forest2);transform:translateY(-2px)}
+.report-question{display:block;margin:14px 0 0 auto;border:0;background:none;color:var(--red);font-weight:750;font-size:.8rem;cursor:pointer}
+.report-question:hover{text-decoration:underline}
+.report-overlay{position:fixed;inset:0;z-index:1100;display:grid;place-items:center;padding:18px;background:rgba(6,59,53,.65);backdrop-filter:blur(5px)}
+.report-modal{width:min(560px,100%);display:grid;gap:16px;padding:26px;background:#fff;box-shadow:0 24px 70px rgba(6,59,53,.3)}
+.report-modal-head{display:flex;justify-content:space-between;align-items:flex-start}
+.report-modal-head h2{margin:4px 0 0;font-size:1.4rem;color:var(--ink)}
+.report-close{border:0;background:none;font-size:1.8rem;color:var(--muted);cursor:pointer;line-height:1}
+.report-modal label{display:grid;gap:6px;font-weight:800;font-size:.88rem;color:var(--ink)}
+.report-modal select,.report-modal textarea{width:100%;border:1px solid var(--line);padding:10px 12px;background:#fff;color:var(--ink);font:inherit}
+.report-context{display:grid;gap:4px;padding:12px;background:#f4f7f4;border-left:4px solid var(--forest)}
+.report-context strong{font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;color:var(--forest)}
+.report-context span{font-size:.82rem;font-weight:800;color:var(--ink)}
+.report-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:6px}
+[data-theme="dark"] .report-fab{background:#1a1a1a;color:#fff;border:1px solid #333}
+[data-theme="dark"] .report-overlay{background:rgba(0,0,0,.85)}
+[data-theme="dark"] .report-modal{background:#0d0d0d;border:1px solid #262626}
+[data-theme="dark"] .report-modal-head h2{color:#fff}
+[data-theme="dark"] .report-modal label{color:#e0e0e0}
+[data-theme="dark"] .report-modal select,[data-theme="dark"] .report-modal textarea{background:#141414;border-color:#2e2e2e;color:#fff}
+[data-theme="dark"] .report-context{background:#141414;border-left-color:var(--lime)}
+[data-theme="dark"] .report-context strong{color:var(--lime)}
+[data-theme="dark"] .report-context span{color:#fff}

@@ -12,3 +12,8 @@ window.FIREBASE_CONFIG = {
 window.ADMIN_EMAILS = [
   "djkleber@gmail.com"
 ];
+
+// Administradores com acesso exclusivo de leitura ao painel
+window.READ_ONLY_ADMIN_EMAILS = [
+  "mariecristinefortesrocha@gmail.com"
+];
