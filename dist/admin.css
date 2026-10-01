@@ -393,3 +393,48 @@
     align-items: stretch;
   }
 }
+
+.reports-panel {
+  margin: 0 0 26px;
+  padding: 24px;
+  background: #fff;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+
+.reports-heading,
+.report-card-head,
+.report-card-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.reports-heading h2 { margin: 5px 0 0; }
+.reports-list { display: grid; gap: 12px; margin-top: 18px; }
+.report-card { padding: 17px; border: 1px solid var(--line); border-left: 5px solid var(--gold); background: #fffdf5; }
+.report-card.resolved { border-left-color: #16a34a; background: #f6fcf8; opacity: .82; }
+.report-card-head>div { display: grid; gap: 3px; }
+.report-card-head small,.report-card-foot small { color: var(--muted); }
+.report-category { color: var(--forest2); font-size: .7rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.report-card p { margin: 15px 0; white-space: pre-wrap; }
+.report-question-context { padding: 11px; background: #f1f5f3; font-size: .85rem; line-height: 1.45; }
+.report-question-context small { display: block; margin-top: 5px; color: var(--muted); }
+.report-card-foot { margin-top: 13px; }
+.status-badge.pending { background: #fff3cd; color: #8a5b00; }
+.report-error { color: var(--red); }
+.read-only-banner { margin-bottom: 20px; padding: 13px 16px; border: 1px solid #bfdbfe; background: #eff6ff; color: #1e40af; font-size: .88rem; font-weight: 750; }
+.read-only-label { display: inline-flex; align-items: center; padding: 6px 10px; background: #e8eef5; color: #475569; font-size: .76rem; font-weight: 800; }
+
+@media (max-width: 680px) {
+  .reports-heading,.report-card-head,.report-card-foot { align-items: stretch; flex-direction: column; }
+  .report-card-foot .btn-sm { width: 100%; }
+}
+
+[data-theme="dark"] .reports-panel { background: #0d0d0d; border-color: #262626; }
+[data-theme="dark"] .report-card { background: #141414; border-color: #262626; }
+[data-theme="dark"] .report-card.resolved { background: #111a14; border-left-color: #16a34a; }
+[data-theme="dark"] .report-question-context { background: #1a1a1a; color: #e0e0e0; }
+[data-theme="dark"] .read-only-banner { background: #0c1e36; border-color: #1e3a5f; color: #93c5fd; }
+[data-theme="dark"] .read-only-label { background: #1e293b; color: #94a3b8; }

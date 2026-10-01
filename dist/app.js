@@ -28,12 +28,13 @@ function save(){
     window.cloudSync.scheduleSave(progress);
   }
 }
+
 function toast(message){
   const el=$('#toast');
   if(!el) return;
   el.textContent=message;
   el.classList.add('show');
-  setTimeout(()=>el.classList.remove('show'),2200);
+  setTimeout(()=>el.classList.remove('show'),2400);
 }
 window.toast = toast;
 window.getProgressState = () => progress;
@@ -59,23 +60,53 @@ window.applyCloudProgress = (cloudProgress) => {
   }
 };
 
-// Um único banco nacional: sem restrição de UF ou instituição
-function questionPool(){ return data.questions; }
+// Banco nacional de questoes
+function questionPool(){ return data.questions || []; }
+
 function shuffle(items){
   const result=[...items];
-  for(let i=result.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [result[i],result[j]]=[result[j],result[i]];}
+  for(let i=result.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [result[i],result[j]]=[result[j],result[i]];
+  }
   return result;
 }
-function quizQuestions(subject){
-  const available=questionPool().filter(q=>!subject||q.subject===subject);
-  return shuffle(available).slice(0,Math.min(subject?5:10,available.length));
+
+function quizQuestions(arg){
+  const pool = questionPool();
+  if(!arg){
+    // Simulado geral equilibrado: 4 questoes de cada uma das 4 areas principais
+    const areas = ['Língua Portuguesa', 'Matemática', 'Ciências da Natureza', 'Ciências Humanas'];
+    const balanced = [];
+    areas.forEach(area => {
+      const ofArea = pool.filter(q => q.subject === area);
+      balanced.push(...shuffle(ofArea).slice(0, 4));
+    });
+    return balanced.length ? shuffle(balanced) : shuffle(pool).slice(0, 16);
+  }
+
+  if(arg.startsWith('exam:')){
+    const examId = arg.replace('exam:', '');
+    const ofExam = pool.filter(q => q.examId === examId);
+    return ofExam.length ? ofExam : shuffle(pool).slice(0, 10);
+  }
+
+  // Estudo por materia especifica
+  const ofSubject = pool.filter(q => q.subject === arg);
+  return shuffle(ofSubject).slice(0, Math.min(10, ofSubject.length));
 }
 
 let currentRouteName = 'login', currentRouteArg = null;
+function loginRequired(){
+  login();
+}
+
 function route(name, arg){
-  if(!isAuthenticated() && name !== 'login'){
-    toast('Acesso restrito. Faça login com o Google para continuar.');
-    name = 'login';
+  if((!isAuthenticated() || (window.cloudSync && !window.cloudSync?.isReady() && !activeUserId)) && name !== 'login'){
+    toast('Acesso restrito. Faca login com o Google para continuar.');
+    loginRequired();
+    currentRouteName = 'login';
+    return;
   }
   currentRouteName = name || (isAuthenticated() ? 'home' : 'login');
   currentRouteArg = arg;
@@ -91,7 +122,7 @@ document.addEventListener('click', e => {
   const b = e.target.closest('[data-route]');
   if(!b) return;
   if(!isAuthenticated() && b.dataset.route !== 'login'){
-    toast('Acesso restrito. Faça login com o Google para continuar.');
+    toast('Acesso restrito. Faca login com o Google para continuar.');
     route('login');
     return;
   }
@@ -99,6 +130,94 @@ document.addEventListener('click', e => {
 });
 
 if($('#menuBtn')) $('#menuBtn').onclick = () => $('#nav').classList.toggle('open');
+
+// Central e Modal de Relato de Problemas
+let currentReportContext = null;
+function openReportModal(context = null){
+  currentReportContext = context;
+  const container = $('#reportModalContainer');
+  if(!container) return;
+
+  const questionInfo = context ? `
+    <div class="report-context">
+      <strong>Questão citada:</strong>
+      <span>${context.exam ? context.exam + ' · ' : ''}${context.institution || ''}</span>
+      <p style="margin:4px 0 0;font-size:0.86rem;line-height:1.4;">${context.question || ''}</p>
+    </div>
+  ` : '';
+
+  container.innerHTML = `
+    <div class="report-overlay" id="reportOverlay">
+      <div class="report-modal" role="dialog" aria-modal="true" aria-labelledby="reportModalTitle">
+        <div class="report-modal-head">
+          <div>
+            <span class="eyebrow">Canal de Apoio</span>
+            <h2 id="reportModalTitle">Reportar problema</h2>
+          </div>
+          <button type="button" class="report-close" id="closeReportModalBtn" aria-label="Fechar">&times;</button>
+        </div>
+        ${questionInfo}
+        <form id="reportForm">
+          <label>
+            <span>Tipo de ocorrência</span>
+            <select name="category" required>
+              <option value="question">Enunciado confuso ou incompleto</option>
+              <option value="answer">Gabarito incorreto ou divergente</option>
+              <option value="content">Alternativa com erro ou repetida</option>
+              <option value="technical">Falha técnica no simulado</option>
+              <option value="accessibility">Acessibilidade ou legibilidade</option>
+              <option value="other">Outro apontamento</option>
+            </select>
+          </label>
+          <label>
+            <span>Descrição detalhada</span>
+            <textarea name="message" rows="4" maxlength="1500" placeholder="Explique o que você notou para que a equipe revise a questão..." required></textarea>
+          </label>
+          <div class="report-actions">
+            <button type="button" class="btn light" id="cancelReportBtn">Cancelar</button>
+            <button type="submit" class="btn primary" id="submitReportBtn">Enviar relato</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+
+  const close = () => { container.innerHTML = ''; currentReportContext = null; };
+  $('#closeReportModalBtn').onclick = close;
+  $('#cancelReportBtn').onclick = close;
+  $('#reportOverlay').onclick = (e) => { if(e.target.id === 'reportOverlay') close(); };
+
+  $('#reportForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const submitBtn = $('#submitReportBtn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Enviando...';
+    try {
+      if(!window.cloudSync?.isReady()) throw new Error('Faca login com o Google antes de enviar o relato.');
+      const fd = new FormData(e.currentTarget);
+      await window.cloudSync.submitReport({
+        category: fd.get('category'),
+        message: String(fd.get('message') || '').trim(),
+        page: currentRouteName || '#home',
+        question: currentReportContext?.question || '',
+        institution: currentReportContext?.institution || '',
+        exam: currentReportContext?.exam || ''
+      });
+      close();
+      toast('Relato enviado para a administracao. Obrigado!');
+    } catch(err) {
+      toast(err.message || 'Nao foi possivel enviar o relato.');
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Enviar relato';
+    }
+  };
+}
+window.openReportModal = openReportModal;
+
+const globalReportBtn = $('#reportProblemBtn');
+if(globalReportBtn){
+  globalReportBtn.onclick = () => openReportModal();
+}
 
 function initTheme(){
   const btn = typeof document !== 'undefined' ? (document.getElementById ? document.getElementById('themeToggleBtn') : (document.querySelector ? document.querySelector('#themeToggleBtn') : null)) : null;
@@ -176,7 +295,7 @@ function login(){
       <div class="login-hero-content">
         <span class="eyebrow-badge">Preparação Nacional Oficial · Institutos Federais</span>
         <h1>Sua aprovação no Instituto Federal começa aqui.</h1>
-        <p class="login-hero-sub">Banco unificado de questões oficiais dos processos seletivos do Brasil inteiro, simulados cronometrados com resoluções comentadas passo a passo e caderno de erros inteligente.</p>
+        <p class="login-hero-sub">Banco unificado de questões oficiais de processos seletivos do Brasil inteiro, simulados com resoluções comentadas passo a passo e caderno de erros inteligente.</p>
 
         <div class="login-cta-box">
           <button class="btn-google-hero" id="loginHeroBtn" type="button">
@@ -210,7 +329,6 @@ function login(){
         </div>
       </div>
 
-      <!-- CAPINHA BONITINHA DO GUIA IFINTENSO -->
       <div class="capa-book">
         <div class="capa-book-badge">
           <span>Edição 2026</span>
@@ -272,31 +390,260 @@ function home(){
 }
 
 function study(){
-  const subjects=[...new Set(questionPool().map(q=>q.subject))];
-  app.innerHTML=`<div class="shell"><div class="section-title"><div><span class="eyebrow">Banco nacional</span><h1>Escolha uma área</h1><p>Pratique com questões de todos os estados, com indicação da origem.</p></div></div><section class="subject-grid">${subjects.map((s,i)=>`<button class="subject" data-route="quiz" data-arg="${s}"><span>0${i+1}</span><h2>${s}</h2><p>Questões oficiais comentadas</p></button>`).join('')}</section></div>`;
+  const canonicalSubjects = [
+    { name: 'Língua Portuguesa', desc: 'Interpretação textual, gramática, sintaxe, pontuação e semântica' },
+    { name: 'Matemática', desc: 'Aritmética, porcentagem, equações, geometria plana e análise de dados' },
+    { name: 'Ciências da Natureza', desc: 'Biologia, ecologia, física mecânica, energia, química e transformações' },
+    { name: 'Ciências Humanas', desc: 'História do Brasil, geografia física e política, cidadania e sociedade' }
+  ];
+
+  const examsList = data.exams || [];
+
+  app.innerHTML=`<div class="shell">
+    <div class="section-title">
+      <div>
+        <span class="eyebrow">Banco nacional · Treino por Disciplina</span>
+        <h1>Escolha uma área</h1>
+        <p>Pratique com questões oficiais de provas reais organizadas e comentadas passo a passo.</p>
+      </div>
+    </div>
+    <section class="subject-grid">
+      ${canonicalSubjects.map((s,i)=>`
+        <button class="subject" data-route="quiz" data-arg="${s.name}">
+          <span>0${i+1}</span>
+          <h2>${s.name}</h2>
+          <p>${s.desc}</p>
+        </button>
+      `).join('')}
+    </section>
+
+    <div class="section-title" style="margin-top: 50px;">
+      <div>
+        <span class="eyebrow">Cadernos Completos de Prova Real</span>
+        <h2>Treinar por Prova Oficial Inteira</h2>
+        <p>Faça os cadernos oficiais aplicados pelos Institutos Federais em processos seletivos anteriores.</p>
+      </div>
+    </div>
+    <section class="exam-cadernos-grid">
+      ${examsList.map(ex => `
+        <article class="caderno-card">
+          <div class="caderno-header">
+            <span class="badge-inst">${ex.institution}</span>
+            <span class="badge-year">${ex.year}</span>
+          </div>
+          <h3>${ex.name}</h3>
+          <p>${ex.totalQuestions} questões reais com gabarito oficial e explicação comentada.</p>
+          <button class="btn light" data-route="quiz" data-arg="exam:${ex.id}">Fazer Prova Completa</button>
+        </article>
+      `).join('')}
+    </section>
+  </div>`;
 }
 
-function quiz(subject){
-  const pool=quizQuestions(subject);
-  app.innerHTML=`<div class="shell narrow"><div class="section-title"><div><span class="eyebrow">${subject||'Simulado nacional'}</span><h1>${pool.length} questões para avançar</h1><p>Responda tudo e receba a explicação de cada item.</p></div></div><form id="quizForm">${pool.map((q,n)=>`<article class="question"><div class="question-meta"><span>${q.subject}</span><span>${q.region==='BR'?'Questão geral':q.region}</span></div><h2>${n+1}. ${q.text}</h2><div class="options">${q.options.map((o,i)=>`<label><input type="radio" name="q${n}" value="${i}"><span>${String.fromCharCode(65+i)}</span>${o}</label>`).join('')}</div></article>`).join('')}<button class="btn primary submit" type="submit">Finalizar simulado</button></form></div>`;
-  $('#quizForm').onsubmit=e=>{e.preventDefault(); const answers=pool.map((q,n)=>e.target.elements['q'+n]?.value); if(answers.some(x=>x===undefined||x===''))return toast('Responda todas as questões.'); let hits=0; pool.forEach((q,n)=>{const ok=Number(answers[n])===q.answer; if(ok)hits++; progress.answered++; progress.correct+=ok?1:0; progress.bySubject[q.subject]=progress.bySubject[q.subject]||{answered:0,correct:0}; progress.bySubject[q.subject].answered++; progress.bySubject[q.subject].correct+=ok?1:0; if(!ok)progress.errors.unshift({text:q.text,answer:q.options[q.answer],explanation:q.explanation});}); progress.errors=progress.errors.slice(0,20); save(); result(pool,answers,hits);};
+function quiz(arg){
+  const pool = quizQuestions(arg);
+  let title = 'Simulado Nacional';
+  let eyebrow = 'Preparação Oficial';
+  let subtitle = `${pool.length} questões selecionadas com resoluções comentadas.`;
+
+  if(arg && arg.startsWith('exam:')){
+    const exId = arg.replace('exam:', '');
+    const ex = (data.exams || []).find(e => e.id === exId);
+    title = ex ? ex.name : 'Prova Real Oficial';
+    eyebrow = 'Caderno Oficial Completo';
+    subtitle = `Caderno com ${pool.length} questões oficiais na íntegra.`;
+  } else if(arg){
+    title = arg;
+    eyebrow = 'Estudo por Matéria';
+    subtitle = `10 questões oficiais de ${arg} comentadas para praticar.`;
+  }
+
+  app.innerHTML=`<div class="shell narrow">
+    <div class="section-title">
+      <div>
+        <span class="eyebrow">${eyebrow}</span>
+        <h1>${title}</h1>
+        <p>${subtitle}</p>
+      </div>
+    </div>
+    <form id="quizForm">
+      ${pool.map((q,n)=>`
+        <article class="question">
+          <div class="question-meta">
+            <span>${q.subject}</span>
+            <span>${q.exam || q.institution || (q.region === 'BR' ? 'Questão geral' : q.region)}</span>
+          </div>
+          ${q.supportText ? `
+            <div class="question-support">
+              <span class="support-title">Texto de Apoio / Contexto:</span>
+              <blockquote>${q.supportText}</blockquote>
+            </div>
+          ` : ''}
+          <h2>${n+1}. ${q.text}</h2>
+          <div class="options">
+            ${q.options.map((o,i)=>`
+              <label>
+                <input type="radio" name="q${n}" value="${i}">
+                <span>${String.fromCharCode(65+i)}</span>
+                ${o}
+              </label>
+            `).join('')}
+          </div>
+          <button type="button" class="report-question" data-report-question="${n}">Reportar erro nesta questão</button>
+        </article>
+      `).join('')}
+      <button class="btn primary submit" type="submit">Finalizar simulado</button>
+    </form>
+  </div>`;
+
+  document.querySelectorAll('[data-report-question]').forEach(button => {
+    button.onclick = () => {
+      const q = pool[Number(button.dataset.reportQuestion)];
+      openReportModal({
+        question: q.text,
+        institution: q.institution,
+        exam: q.exam || q.source
+      });
+    };
+  });
+
+  $('#quizForm').onsubmit = e => {
+    e.preventDefault();
+    const answers = pool.map((q,n) => e.target.elements['q'+n]?.value);
+    if(answers.some(x => x === undefined || x === '')){
+      return toast('Responda todas as questões.');
+    }
+
+    let hits = 0;
+    pool.forEach((q,n) => {
+      const ok = Number(answers[n]) === q.answer;
+      if(ok) hits++;
+      progress.answered++;
+      progress.correct += ok ? 1 : 0;
+      progress.bySubject[q.subject] = progress.bySubject[q.subject] || {answered:0, correct:0};
+      progress.bySubject[q.subject].answered++;
+      progress.bySubject[q.subject].correct += ok ? 1 : 0;
+      if(!ok){
+        progress.errors.unshift({
+          text: q.text,
+          answer: q.options[q.answer],
+          explanation: q.explanation
+        });
+      }
+    });
+
+    progress.errors = progress.errors.slice(0, 30);
+    save();
+    result(pool, answers, hits);
+  };
 }
 
-function result(pool,answers,hits){
-  app.innerHTML=`<div class="shell narrow"><section class="result-head"><span class="eyebrow">Resultado</span><strong>${hits}/${pool.length}</strong><h1>${hits/pool.length>=.7?'Ótimo ritmo. Continue assim.':'Seu próximo estudo já está claro.'}</h1></section><div class="review">${pool.map((q,n)=>{const ok=Number(answers[n])===q.answer;return `<article class="review-item ${ok?'ok':'bad'}"><span>${ok?'Acertou':'Revise'}</span><h3>${q.text}</h3><p><b>Resposta:</b> ${q.options[q.answer]}</p><p>${q.explanation}</p>${q.source?`<small>${q.source}</small>`:''}</article>`}).join('')}</div><div class="actions"><button class="btn primary" data-route="quiz">Novo simulado</button><button class="btn light" data-route="progress">Ver progresso</button></div></div>`;
+function result(pool, answers, hits){
+  const rate = Math.round((hits / pool.length) * 100);
+  app.innerHTML=`<div class="shell narrow">
+    <section class="result-head">
+      <span class="eyebrow">Resultado do Simulado</span>
+      <strong>${hits}/${pool.length}</strong>
+      <h1>${rate >= 70 ? 'Excelente desempenho! Rumo à aprovação.' : 'Bom treino! Revise os pontos de melhoria abaixo.'}</h1>
+      <p style="color:var(--muted);margin-top:6px;">Aproveitamento: ${rate}% de acertos</p>
+    </section>
+    <div class="review">
+      ${pool.map((q,n) => {
+        const ok = Number(answers[n]) === q.answer;
+        return `
+          <article class="review-item ${ok ? 'ok' : 'bad'}">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+              <span>${ok ? 'Acertou' : 'Revise'}</span>
+              <small style="color:var(--muted);font-weight:700;">${q.subject} · ${q.exam || q.institution || ''}</small>
+            </div>
+            <h3>${n+1}. ${q.text}</h3>
+            <p><b>Gabarito oficial:</b> ${String.fromCharCode(65 + q.answer)}) ${q.options[q.answer]}</p>
+            <p><b>Resolução comentada:</b> ${q.explanation}</p>
+            ${q.source ? `<small style="display:block;margin-top:6px;color:var(--muted);">${q.source}</small>` : ''}
+          </article>
+        `;
+      }).join('')}
+    </div>
+    <div class="actions">
+      <button class="btn primary" data-route="study">Estudar outra matéria</button>
+      <button class="btn light" data-route="quiz">Novo simulado</button>
+      <button class="btn light" data-route="progress">Ver meu progresso</button>
+    </div>
+  </div>`;
 }
 
 function exams(){
   const available=Object.entries(data.sources).flatMap(([uf,sources])=>sources.filter(s=>s.institution!=='MEC').map(s=>({...s,uf})));
   const filtered=examFilterState?available.filter(s=>s.uf===examFilterState):available;
   const options=data.states.map(s=>`<option value="${s[0]}" ${s[0]===examFilterState?'selected':''}>${s[1]} (${s[0]})</option>`).join('');
-  app.innerHTML=`<div class="shell"><div class="section-title"><div><span class="eyebrow">Acervo oficial</span><h1>Provas e gabaritos</h1><p>Consulte cadernos e gabaritos oficiais das instituições. Você pode filtrar por estado a qualquer momento.</p></div></div><label class="exam-filter">Filtrar por Estado <select id="examState"><option value="">Todos os estados (${available.length} links)</option>${options}</select></label>${filtered.length?`<section class="exam-list">${filtered.map(s=>`<a class="exam" href="${s.url}" target="_blank" rel="noopener"><div><span>${s.institution} · ${s.uf}</span><h2>${s.title}</h2><p>${s.detail}</p></div><strong>Ver acervo &rarr;</strong></a>`).join('')}</section>`:`<section class="empty"><h2>Ainda não há links cadastrados para este estado.</h2><p>Continue praticando com o banco nacional enquanto ampliamos o acervo.</p><button class="btn primary" data-route="study">Estudar agora</button></section>`}</div>`;
+  app.innerHTML=`<div class="shell">
+    <div class="section-title">
+      <div>
+        <span class="eyebrow">Acervo oficial</span>
+        <h1>Provas e gabaritos</h1>
+        <p>Consulte cadernos e gabaritos oficiais das instituições. Você pode filtrar por estado a qualquer momento.</p>
+      </div>
+    </div>
+    <label class="exam-filter">Filtrar por Estado <select id="examState"><option value="">Todos os estados (${available.length} links)</option>${options}</select></label>
+    ${filtered.length?`
+      <section class="exam-list">
+        ${filtered.map(s=>`
+          <a class="exam" href="${s.url}" target="_blank" rel="noopener">
+            <div>
+              <span>${s.institution} · ${s.uf}</span>
+              <h2>${s.title}</h2>
+              <p>${s.detail}</p>
+            </div>
+            <strong>Ver acervo &rarr;</strong>
+          </a>
+        `).join('')}
+      </section>
+    `:`
+      <section class="empty">
+        <h2>Ainda não há links cadastrados para este estado.</h2>
+        <p>Continue praticando com o banco nacional enquanto ampliamos o acervo.</p>
+        <button class="btn primary" data-route="study">Estudar agora</button>
+      </section>
+    `}
+  </div>`;
   $('#examState').onchange=e=>{examFilterState=e.target.value;exams();};
 }
 
 function progressPage(){
-  const rate=progress.answered?Math.round(progress.correct/progress.answered*100):0; const rows=Object.entries(progress.bySubject);
-  app.innerHTML=`<div class="shell"><div class="section-title"><div><span class="eyebrow">Desempenho</span><h1>Seu progresso</h1><p>Seus dados estão sincronizados com sua conta Google.</p></div></div><section class="metrics large"><div><strong>${progress.answered}</strong><span>respondidas</span></div><div><strong>${progress.correct}</strong><span>acertos</span></div><div><strong>${rate}%</strong><span>aproveitamento</span></div></section><section class="progress-layout"><article class="panel"><h2>Por área</h2>${rows.length?rows.map(([s,v])=>{const p=Math.round(v.correct/v.answered*100);return `<div class="subject-progress"><div><b>${s}</b><span>${p}%</span></div><i><em style="width:${p}%"></em></i></div>`}).join(''):'<p class="muted">Faça seu primeiro simulado para ver a análise por área.</p>'}</article><article class="panel"><h2>Erros recentes</h2>${progress.errors.length?progress.errors.slice(0,4).map(e=>`<details><summary>${e.text}</summary><p><b>Resposta:</b> ${e.answer}<br>${e.explanation}</p></details>`).join(''):'<p class="muted">Nenhum erro registrado ainda.</p>'}</article></section></div>`;
+  const rate=progress.answered?Math.round(progress.correct/progress.answered*100):0;
+  const rows=Object.entries(progress.bySubject);
+  app.innerHTML=`<div class="shell">
+    <div class="section-title">
+      <div>
+        <span class="eyebrow">Desempenho</span>
+        <h1>Seu progresso</h1>
+        <p>Seus dados estão sincronizados com sua conta Google.</p>
+      </div>
+    </div>
+    <section class="metrics large">
+      <div><strong>${progress.answered}</strong><span>respondidas</span></div>
+      <div><strong>${progress.correct}</strong><span>acertos</span></div>
+      <div><strong>${rate}%</strong><span>aproveitamento</span></div>
+    </section>
+    <section class="progress-layout">
+      <article class="panel">
+        <h2>Por área</h2>
+        ${rows.length?rows.map(([s,v])=>{
+          const p=v.answered?Math.round(v.correct/v.answered*100):0;
+          return `<div class="subject-progress"><div><b>${s}</b><span>${p}% (${v.correct}/${v.answered})</span></div><i><em style="width:${p}%"></em></i></div>`;
+        }).join(''):'<p class="muted">Faça seu primeiro simulado para ver a análise por área.</p>'}
+      </article>
+      <article class="panel">
+        <h2>Erros recentes</h2>
+        ${progress.errors.length?progress.errors.slice(0,6).map(e=>`
+          <details style="margin-bottom:10px;">
+            <summary style="cursor:pointer;font-weight:700;">${e.text}</summary>
+            <p style="margin-top:6px;"><b>Resposta correta:</b> ${e.answer}<br><b>Explicação:</b> ${e.explanation}</p>
+          </details>
+        `).join(''):'<p class="muted">Nenhum erro registrado ainda.</p>'}
+      </article>
+    </section>
+  </div>`;
 }
 
 route('login');

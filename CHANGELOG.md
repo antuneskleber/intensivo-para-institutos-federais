@@ -12,6 +12,26 @@ O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.
 > 1. Atualizar este arquivo (`CHANGELOG.md`) com a versão, data e detalhamento das alterações.
 > 2. Exibir o bloco de **Change Log** detalhado na resposta ao usuário em todas as conversas.
 
+## [1.0.0] - 2026-10-01
+
+### Adicionado
+- **Ingestão Completa de Provas Oficiais Reais dos Institutos Federais (+388 questões reais):**
+  - Ingestão dos 10 cadernos oficiais completos do acervo IFRS, IFSul e IFFar (2024 a 2026), expandindo o banco nacional para 649 questões oficiais comentadas.
+  - Todas as questões possuem suas alternativas originais completas (A a E), gabarito oficial conferido e resolução pedagógica comentada passo a passo.
+  - Suporte a textos de apoio e contextualização formatados em blocos dedicados (`question-support`).
+- **Reorganização do Estudo por Matéria e Novo Simulado Equilibrado:**
+  - 4 grandes áreas curriculares padronizadas: Língua Portuguesa (159 questões), Matemática (153 questões), Ciências da Natureza (120 questões) e Ciências Humanas (217 questões).
+  - Simulado nacional equilibrado com distribuição balanceada de 4 itens de cada área do conhecimento.
+  - Seção de "Treino por Prova Real Inteira" permitindo ao estudante realizar os cadernos oficiais de anos anteriores.
+- **Canal de Relatos e Central de Gestão Administrativa:**
+  - Botão contextual "Reportar erro nesta questão" em cada item e modal com categorias (enunciado, gabarito, alternativas, técnico, acessibilidade).
+  - Coleção segura `/reports` no Firestore vinculada ao UID do estudante.
+  - Central de relatos no painel administrativo (`admin.html`) com filtros e fluxo de resolução.
+- **Papel Administrativo Somente Leitura:**
+  - Permissão de visualização sem privilégios de suspensão/alteração para `mariecristinefortesrocha@gmail.com`.
+  - Permissão administrativa completa mantida para `djkleber@gmail.com`.
+  - Atualização correspondente em `firestore.rules` e testes automatizados em `tests/validate-reports.mjs`.
+
 ---
 
 ## [0.9.1] - 2026-09-25

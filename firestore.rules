@@ -1,25 +1,47 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Função auxiliar para verificar permissão de administrador
-    function isAdmin() {
+    function isFullAdmin() {
       return request.auth != null && (
         request.auth.token.email in ['djkleber@gmail.com']
       );
     }
 
+    function isReadOnlyAdmin() {
+      return request.auth != null && (
+        request.auth.token.email in ['mariecristinefortesrocha@gmail.com']
+      );
+    }
+
+    function canViewAdminPanel() {
+      return isFullAdmin() || isReadOnlyAdmin();
+    }
+
     match /users/{userId} {
       // Leitura de um usuário: o próprio usuário ou o administrador
-      allow get: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow get: if request.auth != null && (request.auth.uid == userId || canViewAdminPanel());
       
-      // Listagem geral de usuários: exclusivamente para o administrador
-      allow list: if isAdmin();
+      // Listagem geral de usuários: administradores (leitura e total)
+      allow list: if canViewAdminPanel();
       
       // Gravação: administrador pode alterar tudo (incluindo status); usuário pode gravar se não estiver bloqueado
       allow write: if request.auth != null && (
-        isAdmin() || 
-        (request.auth.uid == userId && (resource == null || resource.data.status != 'blocked'))
+        isFullAdmin() || 
+        (!isReadOnlyAdmin() && request.auth.uid == userId && (resource == null || resource.data.status != 'blocked'))
       );
+    }
+
+    match /reports/{reportId} {
+      allow create: if request.auth != null
+        && !isReadOnlyAdmin()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == 'open'
+        && request.resource.data.category in ['question', 'answer', 'content', 'technical', 'accessibility', 'other']
+        && request.resource.data.message is string
+        && request.resource.data.message.size() > 0
+        && request.resource.data.message.size() <= 1500;
+      allow read: if canViewAdminPanel();
+      allow update, delete: if isFullAdmin();
     }
   }
 }
